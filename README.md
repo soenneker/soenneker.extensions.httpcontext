@@ -8,5 +8,5 @@
 ## Installation
 
 ```
-Install-Package Soenneker.Extensions.HttpContext
+dotnet add package Soenneker.Extensions.HttpContext
 ```
