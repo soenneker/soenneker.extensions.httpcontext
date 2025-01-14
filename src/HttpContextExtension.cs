@@ -31,8 +31,8 @@ public static class HttpContextExtension
 
         // If both RemoteIpAddress and LocalIpAddress are null, it's considered a local request
         // Otherwise, if RemoteIpAddress is null but LocalIpAddress is not, it's not a local request
-        if (remoteIp == null) 
-            return localIp == null;
+        if (remoteIp is null) 
+            return localIp is null;
 
         // Check if the remote IP is the same as the local IP or is a loopback address
         return remoteIp.Equals(localIp) || IPAddress.IsLoopback(remoteIp);
