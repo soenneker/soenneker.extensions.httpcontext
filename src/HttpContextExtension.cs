@@ -1,7 +1,9 @@
-﻿using System.Diagnostics.Contracts;
-using System.Net;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
+using System;
+using System.Diagnostics.Contracts;
+using System.Net;
+using Microsoft.Extensions.Primitives;
 
 namespace Soenneker.Extensions.HttpContext;
 
@@ -10,6 +12,9 @@ namespace Soenneker.Extensions.HttpContext;
 /// </summary>
 public static class HttpContextExtension
 {
+    private const string _cfConnectingIp = "CF-Connecting-IP";
+    private const string _xForwardedFor = "X-Forwarded-For";
+
     /// <summary>
     /// Determines whether the request is coming from a local address.
     /// </summary>
@@ -31,7 +36,7 @@ public static class HttpContextExtension
 
         // If both RemoteIpAddress and LocalIpAddress are null, it's considered a local request
         // Otherwise, if RemoteIpAddress is null but LocalIpAddress is not, it's not a local request
-        if (remoteIp is null) 
+        if (remoteIp is null)
             return localIp is null;
 
         // Check if the remote IP is the same as the local IP or is a loopback address
@@ -52,12 +57,41 @@ public static class HttpContextExtension
     /// </remarks>
     public static void SetUnauthorized(this Microsoft.AspNetCore.Http.HttpContext context)
     {
-        if (!context.Response.Headers.ContainsKey(HeaderNames.WWWAuthenticate))
+        IHeaderDictionary headers = context.Response.Headers;
+
+        if (!headers.ContainsKey(HeaderNames.WWWAuthenticate))
+            headers[HeaderNames.WWWAuthenticate] = "Basic";
+
+        headers[HeaderNames.Authorization] = StringValues.Empty;
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    }
+
+    /// <summary>
+    /// Retrieves the real client IP from Cloudflare or standard proxy headers.
+    /// </summary>
+    [Pure]
+    public static string? GetRequestIp(this Microsoft.AspNetCore.Http.HttpContext context)
+    {
+        if (context is null)
+            return null;
+
+        IHeaderDictionary headers = context.Request.Headers;
+
+        if (headers.TryGetValue(_cfConnectingIp, out StringValues cfIp))
+            return cfIp;
+
+        if (headers.TryGetValue(_xForwardedFor, out StringValues xff))
         {
-            context.Response.Headers[HeaderNames.WWWAuthenticate] = "Basic";
+            ReadOnlySpan<char> span = xff.ToString();
+
+            int commaIndex = span.IndexOf(',');
+
+            if (commaIndex >= 0)
+                return span.Slice(0, commaIndex).Trim().ToString();
+
+            return span.Trim().ToString();
         }
 
-        context.Response.Headers[HeaderNames.Authorization] = "";
-        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return context.Connection.RemoteIpAddress?.ToString();
     }
 }
