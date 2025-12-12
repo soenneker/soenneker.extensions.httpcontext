@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Diagnostics.Contracts;
 using System.Net;
 using Microsoft.Extensions.Primitives;
+using Soenneker.Extensions.String;
 
 namespace Soenneker.Extensions.HttpContext;
 
@@ -82,8 +83,22 @@ public static class HttpContextExtension
 
         if (headers.TryGetValue(_xForwardedFor, out StringValues xff))
         {
-            ReadOnlySpan<char> span = xff.ToString();
+            // StringValues can be a single string or multiple - get first non-empty value
+            string? xffValue = null;
 
+            foreach (string? val in xff)
+            {
+                if (val.HasContent())
+                {
+                    xffValue = val;
+                    break;
+                }
+            }
+
+            if (xffValue is null)
+                return null;
+
+            ReadOnlySpan<char> span = xffValue.AsSpan();
             int commaIndex = span.IndexOf(',');
 
             if (commaIndex >= 0)
