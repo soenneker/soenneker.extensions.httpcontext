@@ -70,6 +70,7 @@ public static class HttpContextExtension
     /// <summary>
     /// Retrieves the real client IP from Cloudflare or standard proxy headers.
     /// </summary>
+    /// <returns>The the real client IP from Cloudflare or standard proxy headers.</returns>
     [Pure]
     public static string? GetRequestIp(this Microsoft.AspNetCore.Http.HttpContext context)
     {
