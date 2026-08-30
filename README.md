@@ -4,7 +4,7 @@
 [![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.extensions.httpcontext/codeql.yml?label=CodeQL&style=for-the-badge)](https://github.com/soenneker/soenneker.extensions.httpcontext/actions/workflows/codeql.yml)
 
 # ![](https://user-images.githubusercontent.com/4441470/224455560-91ed3ee7-f510-4041-a8d2-3fc093025112.png) Soenneker.Extensions.HttpContext
-A collection of helpful HttpContext extension methods.
+Small ASP.NET Core helpers for local-request checks, Basic authentication challenges, and proxy-aware client IP lookup.
 
 ## Installation
 
@@ -12,17 +12,40 @@ A collection of helpful HttpContext extension methods.
 dotnet add package Soenneker.Extensions.HttpContext
 ```
 
-## Quick start
+## Identify local requests
 
 ```csharp
 using Soenneker.Extensions.HttpContext;
 
-// Given an existing Microsoft.AspNetCore.Http.HttpContext named context:
-var result = context.IsLocalRequest();
+if (httpContext.IsLocalRequest())
+{
+    // Apply behavior intended only for requests from this host.
+}
 ```
 
-## Common operations
+`IsLocalRequest()` returns `true` when the remote address is loopback, matches the local connection address, or both addresses are absent. It returns `false` when only the remote address is absent. It examines the connection addresses after any middleware that may have rewritten them.
 
-- `IsLocalRequest()` - Determines whether the request is coming from a local address.
-- `SetUnauthorized()` - Sets the response to indicate that the request is unauthorized.
-- `GetRequestIp()` - Retrieves the real client IP from Cloudflare or standard proxy headers.
+## Return a Basic authentication challenge
+
+```csharp
+httpContext.SetUnauthorized();
+return;
+```
+
+`SetUnauthorized()` sets status code `401` and adds `WWW-Authenticate: Basic` unless a challenge header already exists. It does not write a response body or end request processing, so return from the endpoint or middleware after calling it.
+
+## Read the client IP
+
+```csharp
+string? clientIp = httpContext.GetRequestIp();
+```
+
+The lookup order is:
+
+1. A valid IP address in `CF-Connecting-IP`.
+2. The first address in `X-Forwarded-For`, when it is a valid IP address.
+3. `HttpContext.Connection.RemoteIpAddress`.
+
+Forwarding headers are supplied by the caller and can be spoofed unless your edge proxy removes incoming copies and writes trusted values. Only use the returned forwarded address for authorization, rate limiting, or auditing when that trust boundary is enforced. In standard ASP.NET Core deployments, prefer configuring Forwarded Headers Middleware and then reading `RemoteIpAddress` directly when possible.
+
+Malformed or blank forwarding values are ignored. If no usable address is available, `GetRequestIp()` returns `null`.

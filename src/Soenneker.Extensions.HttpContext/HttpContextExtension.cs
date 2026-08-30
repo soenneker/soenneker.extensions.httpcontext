@@ -4,7 +4,6 @@ using System;
 using System.Diagnostics.Contracts;
 using System.Net;
 using Microsoft.Extensions.Primitives;
-using Soenneker.Extensions.String;
 
 namespace Soenneker.Extensions.HttpContext;
 
@@ -63,14 +62,14 @@ public static class HttpContextExtension
         if (!headers.ContainsKey(HeaderNames.WWWAuthenticate))
             headers[HeaderNames.WWWAuthenticate] = "Basic";
 
-        headers[HeaderNames.Authorization] = StringValues.Empty;
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
     }
 
     /// <summary>
-    /// Retrieves the real client IP from Cloudflare or standard proxy headers.
+    /// Retrieves a client IP from Cloudflare or standard proxy headers, falling back to the connection address.
     /// </summary>
-    /// <returns>The the real client IP from Cloudflare or standard proxy headers.</returns>
+    /// <remarks>Forwarding headers must only be trusted when a trusted proxy replaces values supplied by clients.</remarks>
+    /// <returns>The first valid configured header address, the remote connection address, or <c>null</c>.</returns>
     [Pure]
     public static string? GetRequestIp(this Microsoft.AspNetCore.Http.HttpContext context)
     {
@@ -80,34 +79,47 @@ public static class HttpContextExtension
         IHeaderDictionary headers = context.Request.Headers;
 
         if (headers.TryGetValue(_cfConnectingIp, out StringValues cfIp))
-            return cfIp;
+        {
+            string? parsed = GetFirstIp(cfIp, splitCommaSeparatedValues: false);
+
+            if (parsed is not null)
+                return parsed;
+        }
 
         if (headers.TryGetValue(_xForwardedFor, out StringValues xff))
         {
-            // StringValues can be a single string or multiple - get first non-empty value
-            string? xffValue = null;
+            string? parsed = GetFirstIp(xff, splitCommaSeparatedValues: true);
 
-            foreach (string? val in xff)
-            {
-                if (val.HasContent())
-                {
-                    xffValue = val;
-                    break;
-                }
-            }
-
-            if (xffValue is null)
-                return null;
-
-            ReadOnlySpan<char> span = xffValue.AsSpan();
-            int commaIndex = span.IndexOf(',');
-
-            if (commaIndex >= 0)
-                return span.Slice(0, commaIndex).Trim().ToString();
-
-            return span.Trim().ToString();
+            if (parsed is not null)
+                return parsed;
         }
 
         return context.Connection.RemoteIpAddress?.ToString();
+    }
+
+    private static string? GetFirstIp(StringValues values, bool splitCommaSeparatedValues)
+    {
+        foreach (string? value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            ReadOnlySpan<char> candidate = value.AsSpan();
+
+            if (splitCommaSeparatedValues)
+            {
+                int commaIndex = candidate.IndexOf(',');
+
+                if (commaIndex >= 0)
+                    candidate = candidate[..commaIndex];
+            }
+
+            candidate = candidate.Trim();
+
+            if (IPAddress.TryParse(candidate, out IPAddress? address))
+                return address.ToString();
+        }
+
+        return null;
     }
 }
