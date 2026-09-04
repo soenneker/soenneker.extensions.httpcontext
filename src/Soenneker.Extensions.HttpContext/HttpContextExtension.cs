@@ -46,7 +46,7 @@ public static class HttpContextExtension
     /// <summary>
     /// Sets the response to indicate that the request is unauthorized.
     /// </summary>
-    /// <param name="context">The HTTP context for the current request.</param>
+    /// <param name="context">The HTTP context for the current request.</param> 
     /// <remarks>
     /// This method updates the response to indicate that the request requires authentication.
     /// It sets the WWW-Authenticate header to "Basic", prompting clients to provide credentials.
