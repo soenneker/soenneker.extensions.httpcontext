@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using System.Net;
-using System.Threading.Tasks;
 using Soenneker.Tests.Unit;
 
 namespace Soenneker.Extensions.HttpContext.Tests;
@@ -9,7 +8,7 @@ namespace Soenneker.Extensions.HttpContext.Tests;
 public class HttpContextExtensionTests : UnitTest
 {
     [Test]
-    public async Task SetUnauthorized_does_not_add_an_authorization_response_header()
+    public async System.Threading.Tasks.ValueTask SetUnauthorized_does_not_add_an_authorization_response_header()
     {
         var context = new DefaultHttpContext();
 
@@ -21,7 +20,7 @@ public class HttpContextExtensionTests : UnitTest
     }
 
     [Test]
-    public async Task GetRequestIp_ignores_malformed_forwarding_headers()
+    public async System.Threading.Tasks.ValueTask GetRequestIp_ignores_malformed_forwarding_headers()
     {
         var context = new DefaultHttpContext();
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
@@ -32,7 +31,7 @@ public class HttpContextExtensionTests : UnitTest
     }
 
     [Test]
-    public async Task GetRequestIp_returns_the_first_forwarded_address()
+    public async System.Threading.Tasks.ValueTask GetRequestIp_returns_the_first_forwarded_address()
     {
         var context = new DefaultHttpContext();
         context.Request.Headers["X-Forwarded-For"] = "203.0.113.10, 10.0.0.4";
