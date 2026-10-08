@@ -2,13 +2,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using System.Net;
 using Soenneker.Tests.Unit;
+using System.Threading;
 
 namespace Soenneker.Extensions.HttpContext.Tests;
 
 public class HttpContextExtensionTests : UnitTest
 {
     [Test]
-    public async System.Threading.Tasks.ValueTask SetUnauthorized_does_not_add_an_authorization_response_header()
+    public async System.Threading.Tasks.ValueTask SetUnauthorized_does_not_add_an_authorization_response_header(CancellationToken cancellationToken)
     {
         var context = new DefaultHttpContext();
 
@@ -20,7 +21,7 @@ public class HttpContextExtensionTests : UnitTest
     }
 
     [Test]
-    public async System.Threading.Tasks.ValueTask GetRequestIp_ignores_malformed_forwarding_headers()
+    public async System.Threading.Tasks.ValueTask GetRequestIp_ignores_malformed_forwarding_headers(CancellationToken cancellationToken)
     {
         var context = new DefaultHttpContext();
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
@@ -31,7 +32,7 @@ public class HttpContextExtensionTests : UnitTest
     }
 
     [Test]
-    public async System.Threading.Tasks.ValueTask GetRequestIp_returns_the_first_forwarded_address()
+    public async System.Threading.Tasks.ValueTask GetRequestIp_returns_the_first_forwarded_address(CancellationToken cancellationToken)
     {
         var context = new DefaultHttpContext();
         context.Request.Headers["X-Forwarded-For"] = "203.0.113.10, 10.0.0.4";
